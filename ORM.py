@@ -2,8 +2,19 @@ import sqlite3
 
 
 class BaseManager:
-    """Создание базового Менеджера, в котором определен метод select для выборки в БД.
+    """Создание базового Менеджера, в котором определен метод select и insert для выборки в БД.
     Далее будут определены оставшиеся методы."""
+
+    connection = sqlite3.connect("my_database.db")
+
+    @classmethod
+    def _get_cursor(cls):
+        return cls.connection.cursor()
+
+    @classmethod
+    def _execute_query(cls, query, params):
+        cursor = cls._get_cursor()
+        cursor.execute(query, params)
 
     def __init__(self, model_class):
         self.model_class = model_class
@@ -30,8 +41,25 @@ class BaseManager:
 
         return model_objects
 
-    def bulk_insert(self, row: list):
-        pass
+    def bulk_insert(self, rows: list):
+        field_names = rows[0].keys()
+        # assert all(row.keys() == field_names for in rows[1:])
+
+        fields_format = ", ".join(field_names)
+        values_placeholder_format = ", ".join(
+            [f"({', '.join(['?'] * len(field_names))})"] * len(rows)
+        )
+        query = (
+            f"INSERT INTO {self.model_class.table_name} ({fields_format}) "
+            f"VALUES {values_placeholder_format}"
+        )
+
+        params = list()
+        for row in rows:
+            row_values = [row[field_name] for field_name in field_names]
+            params += row_values
+
+        self._execute_query(query, params)
 
     def update(self, new_data: dict):
         pass
