@@ -8,6 +8,10 @@ class BaseManager:
     connection = sqlite3.connect("my_database.db")
 
     @classmethod
+    def _commit(cls):
+        cls.connection.commit()
+
+    @classmethod
     def _get_cursor(cls):
         return cls.connection.cursor()
 
@@ -25,9 +29,9 @@ class BaseManager:
         query = f"SELECT {fields_format} FROM {self.model_class.table_name}"
 
         # Execute query
-        connection = sqlite3.connect("my_database.db")
-        cursor = connection.cursor()
+        cursor = self._get_cursor()
         cursor.execute(query)
+        self._commit()
 
         model_objects = list()
         is_fletching_completed = False
@@ -43,7 +47,7 @@ class BaseManager:
 
     def bulk_insert(self, rows: list):
         field_names = rows[0].keys()
-        # assert all(row.keys() == field_names for in rows[1:])
+        assert all(row.keys() == field_names for row in rows[1:])
 
         fields_format = ", ".join(field_names)
         values_placeholder_format = ", ".join(
@@ -60,6 +64,7 @@ class BaseManager:
             params += row_values
 
         self._execute_query(query, params)
+        self._commit()
 
     def update(self, new_data: dict):
         pass

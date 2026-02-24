@@ -3,7 +3,8 @@ import sqlite3
 connection = sqlite3.connect("my_database.db")
 cursor = connection.cursor()
 
-# hello
+cursor.execute("DROP TABLE IF EXISTS employees")
+
 # Create employees table
 query = """
     CREATE TABLE employees (
