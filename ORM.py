@@ -31,21 +31,20 @@ class BaseManager:
         # Execute query
         cursor = self._get_cursor()
         cursor.execute(query)
-        self._commit()
 
         model_objects = list()
-        is_fletching_completed = False
-        while not is_fletching_completed:
+        is_fetching_completed = False
+        while not is_fetching_completed:
             result = cursor.fetchmany(size=chunk_sizes)
             for row_values in result:
                 keys, values = fields_name, row_values
                 row_data = dict(zip(keys, values))
                 model_objects.append(self.model_class(**row_data))
-            is_fletching_completed = len(result) < chunk_sizes
+            is_fetching_completed = len(result) < chunk_sizes
 
         return model_objects
 
-    def bulk_insert(self, rows: list):
+    def bulk_insert(self, rows: list[dict]):
         field_names = rows[0].keys()
         assert all(row.keys() == field_names for row in rows[1:])
 
