@@ -20,7 +20,7 @@ class BaseManager:
         cursor = cls._get_cursor()
         cursor.execute(query, params)
 
-    def __init__(self, model_class):
+    def __init__(self, model_class) -> None:
         self.model_class = model_class
 
     def select(self, *fields_name, chunk_sizes=2000):
@@ -98,4 +98,4 @@ class BaseModel(metaclass=MetaModel):
         attr_format = ", ".join(
             [f"{field}={value}" for field, value in self.__dict__.items()]
         )
-        return f"<{self.__class__.__name__}: ({attr_format})"
+        return f"<{self.__class__.__name__}: ({attr_format})>"
