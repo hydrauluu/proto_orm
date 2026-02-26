@@ -20,7 +20,7 @@ class BaseManager:
         cursor = cls._get_cursor()
         cursor.execute(query, params)
 
-    def __init__(self, model_class) -> None:
+    def __init__(self, model_class):
         self.model_class = model_class
 
     def select(self, *fields_name, chunk_sizes=2000):
@@ -66,10 +66,22 @@ class BaseManager:
         self._commit()
 
     def update(self, new_data: dict):
-        pass
+
+        fields_names = new_data.keys()
+        place_holder_format = ", ".join(
+            [f"{field_name} = ?" for field_name in fields_names]
+        )
+        query = f"UPDATE {self.model_class.table_name} SET {place_holder_format}"
+        params = list(new_data.values())
+
+        self._execute_query(query, params)
+        self._commit()
 
     def delete(self):
-        pass
+        query = f"DELETE FROM {self.model_class.table_name}"
+
+        self._execute_query(query, None)
+        self._commit()
 
 
 class MetaModel(type):
