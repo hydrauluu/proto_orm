@@ -80,8 +80,8 @@ class BaseManager:
     def delete(self):
         query = f"DELETE FROM {self.model_class.table_name}"
 
-        self._execute_query(query, None)
-        self._commit()
+        cursor = self._get_cursor()
+        cursor.execute(query)
 
 
 class MetaModel(type):
