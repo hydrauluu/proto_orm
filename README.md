@@ -8,8 +8,11 @@
 На данный момент реализованы следующие операции:
 - **SELECT**: Выборка данных из таблицы.
 - **INSERT**: Добавление новых записей (bulk insert).
+- **UPDATE**: Обновление существующих записей.
+- **DELETE**: Удаление всех записей.
 
-> *Примечание: Реализация UPDATE и DELETE в процессе разработки.*
+# Запланированные функции
+- Внедрение условия WHERE для операций SELECT, UPDATE и DELETE.
 
 ## Использование
 
@@ -47,4 +50,10 @@ new_employees = [
     {"first_name": "Yoweri", "last_name": "ALOH", "salary": 15000},
 ]
 Employee.objects.bulk_insert(rows=new_employees)
+
+# 3. Удаление данных (DELETE)
+Employee.objects.delete()
+
+# 4. Обновление данных (UPDATE)
+Employee.objects.update(new_data={"salary": 17000, "grade": "L2"})
 ```
