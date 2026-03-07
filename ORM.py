@@ -1,5 +1,7 @@
 import sqlite3
 
+from fields import BaseFieldDescriptor
+
 
 class BaseManager:
     """Создание базового Менеджера, в котором определен метод select и insert для выборки в БД.
@@ -82,12 +84,29 @@ class BaseManager:
 
         cursor = self._get_cursor()
         cursor.execute(query)
+        self._commit()
 
 
 class MetaModel(type):
+    manager_class = BaseManager
+
     """Метакласс, который перехватывает создание класса в run-time."""
 
-    manager_class = BaseManager
+    def __new__(cls, name, bases, attrs):
+
+        fields = {
+            key: value
+            for key, value in attrs.items()
+            if isinstance(value, BaseFieldDescriptor)
+        }
+
+        private_slots = [f"_{field_name}" for field_name in fields]
+        attrs["__slots__"] = private_slots
+        attrs["_fields"] = fields
+
+        cls = super().__new__(cls, name, bases, attrs)
+
+        return cls
 
     def _get_manager(cls):
         return cls.manager_class(model_class=cls)
@@ -101,6 +120,7 @@ class BaseModel(metaclass=MetaModel):
     """Базовая Модель, которая наследуется от метакласса и в которой устанавливается название таблицы."""
 
     table_name = ""
+    manager_class = BaseManager
 
     def __init__(self, **row_data) -> None:
         for fields_name, value in row_data.items():
