@@ -2,8 +2,8 @@ from ORM import BaseManager, BaseModel
 
 
 class Employee(BaseModel):
-    manager_class = BaseManager
     table_name = "employees"
+    manager_class = BaseManager
 
 
 # SQL: SELECT first_name, last_name, salary, grade FROM employees;
