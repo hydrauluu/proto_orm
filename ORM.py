@@ -16,10 +16,17 @@ class Q:
 
     AND = "AND"
     OR = "OR"
+    XOR = "XOR"
+
+    default = AND
+    connectors = (None, AND, OR, XOR)
 
     def __init__(self, *args, _connector=None, _negated=False, **kwargs):
-        self.children = list(args)
-        self.conditions = kwargs
+        if _connector not in self.connectors:
+            valid = ", ".join(repr(c) for c in self.connectors[1:])
+            raise ValueError(f"_connector должен быть одним из: {valid}")
+
+        self.children = [*args, *sorted(kwargs.items())]
         self.connector = _connector or self.AND
         self.negated = _negated
 
@@ -36,6 +43,9 @@ class Q:
         obj = self.copy()
         obj.negated = not self.negated
         return obj
+
+    def copy(self) -> "Q":
+        return copy.copy(self)
 
 
 class BaseManager:
