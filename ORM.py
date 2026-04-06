@@ -26,11 +26,10 @@ class BaseManager:
         self.model_class = model_class
 
     def select(self, *fields_name, chunk_sizes=2000):
-        # SELECT query
+
         fields_format = ", ".join(fields_name)
         query = f"SELECT {fields_format} FROM {self.model_class.table_name}"
 
-        # Execute query
         cursor = self._get_cursor()
         cursor.execute(query)
 
