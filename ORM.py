@@ -1,6 +1,41 @@
 import sqlite3
-
+import copy
 from fields import BaseFieldDescriptor
+
+
+class Q:
+    """
+    Узел дерева условий.
+
+    Пример:
+       Q(age__gate=18)
+       Q(age__gte=18) & Q(activate=True)
+       Q(grade="L1") | Q(grade="L2")
+       -Q(activate=True)
+    """
+
+    AND = "AND"
+    OR = "OR"
+
+    def __init__(self, *args, _connector=None, _negated=False, **kwargs):
+        self.children = list(args)
+        self.conditions = kwargs
+        self.connector = _connector or self.AND
+        self.negated = _negated
+
+    def __and__(self, other: "Q") -> "Q":
+        """Q(a=1) & Q(b=2) -> AND-узел с двумя детьми"""
+        return Q(self, other, _connector=self.AND)
+
+    def __or__(self, other: "Q") -> "Q":
+        """Q(a=1) | Q(b=2) -> OR-узел с 2 детьми"""
+        return Q(self, other, _connector=self.OR)
+
+    def __invert__(self) -> "Q":
+        """-Q(a=1) ->  копия с negated=True"""
+        obj = self.copy()
+        obj.negated = not self.negated
+        return obj
 
 
 class BaseManager:
