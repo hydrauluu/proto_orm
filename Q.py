@@ -143,7 +143,7 @@ def _compile_condition(field_lookup: str, value) -> tuple[str, list]:
         return f"{field} {operator} ?", [value]
 
 
-def _compiler_q(q: Q) -> tuple[str, list]:
+def _compile_q(q: Q) -> tuple[str, list]:
     """Рекурсивно компилирует дерево в Q для SQL-фрагмент."""
 
     parts, params = [], []
@@ -155,7 +155,7 @@ def _compiler_q(q: Q) -> tuple[str, list]:
             parts.append(sql)
             params.extend(p)
         elif isinstance(child, Q):
-            sql, p = _compiler_q(child)
+            sql, p = _compile_q(child)
             parts.append(sql)
             params.extend(p)
         else:
@@ -177,3 +177,25 @@ def _compiler_q(q: Q) -> tuple[str, list]:
         sql = f"NOT ({sql})"
 
     return sql, params
+
+
+def build_where(q_root: Q | None) -> tuple[str, list]:
+    """ """
+    if q_root is None:
+        return "", []
+    sql, params = _compile_q(q_root)
+    return f"WHERE {sql}", params
+
+
+def build_order_by(ordering: list[str]) -> str:
+    """ """
+    if not ordering:
+        return ""
+    clauses = []
+    for field in ordering:
+        if field.startswith("-"):
+            clauses.append(f"{field[1:]} DESC")
+        else:
+            clauses.append(f"{field} ASC")
+
+    return "ORDER BY " + ", ".join(clauses)
