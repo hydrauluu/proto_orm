@@ -148,5 +148,32 @@ def _compiler_q(q: Q) -> tuple[str, list]:
 
     parts, params = [], []
 
-    for child in Q.children:
-        pass
+    for child in q.children:
+        if isinstance(child, tuple):
+            field_lookup, value = child
+            sql, p = _compile_condition(field_lookup, value)
+            parts.append(sql)
+            params.extend(p)
+        elif isinstance(child, Q):
+            sql, p = _compiler_q(child)
+            parts.append(sql)
+            params.extend(p)
+        else:
+            raise TypeError(f"Неожиданный тип в Q.children: {type(child)}")
+
+    if not parts:
+        raise ValueError("Q-объект не содержит условий")
+
+    if q.connector == Q.XOR:
+        or_sql = f"({' OR '.join(parts)})"
+        and_sql = f"({' AND '.join(parts)})"
+        sql = f"({or_sql} AND NOT {and_sql})"
+        params = params + params
+    else:
+        sep = f" {q.connector} "
+        sql = f"({sep.join(parts)})" if len(parts) > 1 else parts[0]
+
+    if q.negated:
+        sql = f"NOT ({sql})"
+
+    return sql, params
