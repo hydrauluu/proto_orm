@@ -5,25 +5,24 @@ cursor = connection.cursor()
 
 cursor.execute("DROP TABLE IF EXISTS employees")
 
-# Create employees table
-query = """
+cursor.execute("""
     CREATE TABLE employees (
-        id SERIAL PRIMARY KEY,
-        first_name varchar(255),
-        last_name varchar(255),
-        salary numeric(10, 2),
-        grade varchar(10)
+        id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name VARCHAR(255),
+        last_name  VARCHAR(255),
+        salary     NUMERIC(10, 2),
+        grade      VARCHAR(10)
     )
-"""
-cursor.execute(query)
+""")
 
-# Insert some data
-query = """
+cursor.execute("""
     INSERT INTO employees (first_name, last_name, salary, grade)
-        VALUES
-            ('Renaud', 'Lemec', 13000, 'L2'),
-            ('Junior', 'Racio', 16000, 'L3');
-"""
-cursor.execute(query)
+    VALUES
+        ('Renaud', 'Lemec', 13000, 'L2'),
+        ('Junior', 'Racio', 16000, 'L3')
+""")
 
 connection.commit()
+connection.close()
+
+print("База данных создана: my_database.db")

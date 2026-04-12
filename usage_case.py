@@ -1,40 +1,49 @@
-from ORM import BaseManager, BaseModel
+from Base import BaseModel
+from Manager import BaseManager
+from Q import Q
 
 
 class Employee(BaseModel):
-    table_name = "employees"
+    table_name    = "employees"
     manager_class = BaseManager
 
 
-# SQL: SELECT first_name, last_name, salary, grade FROM employees;
-employees = Employee.objects.select(
-    "first_name", "last_name", "salary", "grade"
-)  # employees: List[Employee]
+# SELECT все записи
+employees = Employee.objects.all()
+print(f"Все сотрудники:\n {employees}\n")
 
-print(f"First select result:\n {employees} \n")
+# SELECT с filter
+employees = Employee.objects.filter(salary__gte=13000)
+print(f"Зарплата >= 13000:\n {employees}\n")
 
+# SELECT с exclude
+employees = Employee.objects.filter(salary__gte=13000).exclude(grade="L3")
+print(f"Зарплата >= 13000, не L3:\n {employees}\n")
 
-# SQL: INSERT INTO employees (first_name, last_name, salary)
-#  	VALUES ('Yan', 'KIKI', 10000), ('Yoweri', 'ALOH', 15000);
-employees_data = [
-    {"first_name": "Yan", "last_name": "KIKI", "salary": 10000},
-    {"first_name": "Yoweri", "last_name": "ALOH", "salary": 15000},
-]
-Employee.objects.bulk_insert(rows=employees_data)
+# SELECT с Q (OR)
+employees = Employee.objects.filter(Q(grade="L2") | Q(grade="L3"))
+print(f"Grade L2 или L3:\n {employees}\n")
 
-employees = Employee.objects.select("first_name", "last_name", "salary", "grade")
-print(f"Select result after bulk insert:\n {employees} \n")
+# SELECT с order_by
+employees = Employee.objects.order_by("-salary")
+print(f"Отсортировано по убыванию salary:\n {employees}\n")
 
+# INSERT
+Employee.objects.bulk_insert([
+    {"first_name": "Yan",    "last_name": "KIKI", "salary": 10000, "grade": "L1"},
+    {"first_name": "Yoweri", "last_name": "ALOH", "salary": 15000, "grade": "L2"},
+])
+print(f"После bulk_insert:\n {Employee.objects.all()}\n")
 
-# SQL: UPDATE employees SET salary = 17000, grade = 'L2';
-Employee.objects.update(new_data={"salary": 17000, "grade": "L2"})
+# UPDATE
+Employee.objects.filter(grade="L1").update(salary=12000)
+print(f"После update L1 → salary=12000:\n {Employee.objects.all()}\n")
 
-employees = Employee.objects.select("first_name", "last_name", "salary", "grade")
-print(f"Select result after update:\n {employees} \n")
+# DELETE
+Employee.objects.filter(grade="L1").delete()
+print(f"После delete grade=L1:\n {Employee.objects.all()}\n")
 
-
-# SQL: DELETE FROM employees;
-Employee.objects.delete()
-
-employees = Employee.objects.select("first_name", "last_name", "salary", "grade")
-print(f"Select result after delete:\n {employees} \n")
+# count / exists / first
+print(f"count L2: {Employee.objects.filter(grade='L2').count()}")
+print(f"exists L5: {Employee.objects.filter(grade='L5').exists()}")
+print(f"first по salary: {Employee.objects.order_by('salary').first()}")
