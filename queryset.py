@@ -1,17 +1,18 @@
 import copy
+from warnings import resetwarnings
 
 from Q import Q
 
 
 LOOKUP_OPERATORS = {
     "exact": "=",
-    "ne":    "!=",
-    "lt":    "<",
-    "lte":   "<=",
-    "gt":    ">",
-    "gte":   ">=",
-    "like":  "LIKE",
-    "in":    "IN",
+    "ne": "!=",
+    "lt": "<",
+    "lte": "<=",
+    "gt": ">",
+    "gte": ">=",
+    "like": "LIKE",
+    "in": "IN",
 }
 
 
@@ -23,7 +24,8 @@ def _compile_condition(field_lookup: str, value) -> tuple[str, list]:
     "id__in", [1, 2, 3]  →  "id IN (?, ?, ?)", [1, 2, 3]
     """
     field, lookup = (
-        field_lookup.rsplit("__", 1) if "__" in field_lookup
+        field_lookup.rsplit("__", 1)
+        if "__" in field_lookup
         else (field_lookup, "exact")
     )
 
@@ -71,10 +73,10 @@ def _compile_q(q: Q) -> tuple[str, list]:
         # SQLite не поддерживает XOR напрямую.
         # XOR(a, b) = (a OR b) AND NOT (a AND b)
         # params дублируются — каждая часть требует свои плейсхолдеры
-        or_sql  = f"({' OR '.join(parts)})"
+        or_sql = f"({' OR '.join(parts)})"
         and_sql = f"({' AND '.join(parts)})"
-        sql     = f"({or_sql} AND NOT {and_sql})"
-        params  = params + params
+        sql = f"({or_sql} AND NOT {and_sql})"
+        params = params + params
     else:
         sep = f" {q.connector} "
         sql = f"({sep.join(parts)})" if len(parts) > 1 else parts[0]
@@ -118,15 +120,15 @@ class QuerySet:
     """
 
     def __init__(self, model_class, connection):
-        self.model_class   = model_class
-        self.connection    = connection
-        self._q: Q | None  = None
+        self.model_class = model_class
+        self.connection = connection
+        self._q: Q | None = None
         self._ordering: list[str] = []
-        self._result_cache = None      # было _result_cahe — опечатка
+        self._result_cache = None
 
     def _clone(self) -> "QuerySet":
         qs = QuerySet(self.model_class, self.connection)
-        qs._q        = copy.copy(self._q)
+        qs._q = copy.deepcopy(self._q)
         qs._ordering = self._ordering.copy()
         return qs
 
@@ -158,7 +160,7 @@ class QuerySet:
 
     def order_by(self, *fields) -> "QuerySet":
         qs = self._clone()
-        qs._ordering     = list(fields)
+        qs._ordering = list(fields)
         qs._result_cache = None
         return qs
 
@@ -166,15 +168,40 @@ class QuerySet:
 
     def _build_select_sql(self) -> tuple[str, list]:
         where_sql, params = build_where(self._q)
-        order_sql         = build_order_by(self._ordering)
-        query = " ".join(filter(None, [
-            f"SELECT * FROM {self.model_class.table_name}",
-            where_sql,
-            order_sql,
-        ]))
+        order_sql = build_order_by(self._ordering)
+        query = " ".join(
+            filter(
+                None,
+                [
+                    f"SELECT * FROM {self.model_class.table_name}",
+                    where_sql,
+                    order_sql,
+                ],
+            )
+        )
         return query, params
 
     # -- Терминальные методы (идут в БД) -------------------------------------
+
+    def get(self, *args, **kwargs) -> object:
+        """Возвращает ровно один объект или бросает исключение.
+
+        Raises:
+            DoesNotExist - если записей не найдено.
+            MultipleObjectsReturned - если более одной записи.
+        """
+        qs = self.filter(*args, **kwargs) if (args or kwargs) else self
+        results = qs._fetch()
+        if not results:
+            raise self.model_class.DoesNotExist(
+                f"{self.model_class.__name__} не найден"
+            )
+        if len(results) > 1:
+            raise self.model_class.MultipleObjectsReturned(
+                f"Ожидался один объект, получено {len(results)}"
+            )
+
+        return results[0]
 
     def _fetch(self) -> list:
         """SELECT с кэшированием результата."""
@@ -187,20 +214,24 @@ class QuerySet:
 
         col_names = tuple(desc[0] for desc in cursor.description)
         self._result_cache = [
-            self.model_class(**dict(zip(col_names, row)))
-            for row in cursor.fetchall()
+            self.model_class(**dict(zip(col_names, row))) for row in cursor.fetchall()
         ]
         return self._result_cache
 
     def update(self, **new_data) -> int:
         """UPDATE с текущими фильтрами. Возвращает кол-во затронутых строк."""
-        set_sql            = ", ".join(f"{f} = ?" for f in new_data)
+        set_sql = ", ".join(f"{f} = ?" for f in new_data)
         where_sql, wparams = build_where(self._q)
-        query = " ".join(filter(None, [
-            f"UPDATE {self.model_class.table_name}",
-            f"SET {set_sql}",
-            where_sql,
-        ]))
+        query = " ".join(
+            filter(
+                None,
+                [
+                    f"UPDATE {self.model_class.table_name}",
+                    f"SET {set_sql}",
+                    where_sql,
+                ],
+            )
+        )
         cursor = self.connection.cursor()
         cursor.execute(query, list(new_data.values()) + wparams)
         self.connection.commit()
@@ -209,10 +240,15 @@ class QuerySet:
     def delete(self) -> int:
         """DELETE с текущими фильтрами. Возвращает кол-во удалённых строк."""
         where_sql, params = build_where(self._q)
-        query = " ".join(filter(None, [
-            f"DELETE FROM {self.model_class.table_name}",
-            where_sql,
-        ]))
+        query = " ".join(
+            filter(
+                None,
+                [
+                    f"DELETE FROM {self.model_class.table_name}",
+                    where_sql,
+                ],
+            )
+        )
         cursor = self.connection.cursor()
         cursor.execute(query, params)
         self.connection.commit()
@@ -220,10 +256,15 @@ class QuerySet:
 
     def count(self) -> int:
         where_sql, params = build_where(self._q)
-        query = " ".join(filter(None, [
-            f"SELECT COUNT(*) FROM {self.model_class.table_name}",
-            where_sql,
-        ]))
+        query = " ".join(
+            filter(
+                None,
+                [
+                    f"SELECT COUNT(*) FROM {self.model_class.table_name}",
+                    where_sql,
+                ],
+            )
+        )
         cursor = self.connection.cursor()
         cursor.execute(query, params)
         return cursor.fetchone()[0]
@@ -237,11 +278,15 @@ class QuerySet:
 
     # -- Протокол итерации ---------------------------------------------------
 
-    def __iter__(self):        return iter(self._fetch())
-    def __len__(self):         return len(self._fetch())
-    def __getitem__(self, i):  return self._fetch()[i]
+    def __iter__(self):
+        return iter(self._fetch())
 
-    def __repr__(self):
-        results = self._fetch()
-        suffix  = " ..." if len(results) > 3 else ""
-        return f"<QuerySet {results[:3]}{suffix}>"
+    def __len__(self):
+        return len(self._fetch())
+
+    def __getitem__(self, i):
+        return self._fetch()[i]
+
+    def __repr__(self) -> str:
+        sql, params = self._build_select_sql()
+        return f"<QuerySet sql={sql!r} params={params}>"

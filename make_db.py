@@ -1,6 +1,9 @@
+import os
 import sqlite3
 
-connection = sqlite3.connect("my_database.db")
+DB_PATH = os.getenv("ORM_DB_PATH", "my_database.db")
+
+connection = sqlite3.connect(DB_PATH)
 cursor = connection.cursor()
 
 cursor.execute("DROP TABLE IF EXISTS employees")
