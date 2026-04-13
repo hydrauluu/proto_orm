@@ -9,9 +9,9 @@ class Employee(BaseModel):
     manager_class = BaseManager
 
     first_name = CharField(max_length=255)
-    last_name = CharField(max_length=255)
-    salary = IntegerField(min_value=0)
-    garde = CharField(max_length=10)
+    last_name  = CharField(max_length=255)
+    salary     = IntegerField(min_value=0)
+    grade      = CharField(max_length=10)  # было: garde — опечатка
 
 
 # SELECT все записи
@@ -34,7 +34,7 @@ print(f"Grade L2 или L3:\n {employees}\n")
 employees = Employee.objects.order_by("-salary")
 print(f"Отсортировано по убыванию salary:\n {employees}\n")
 
-# get - один объект
+# get — один объект
 try:
     emp = Employee.objects.get(first_name="Renaud")
     print(f"get(): {emp}\n")
@@ -42,12 +42,10 @@ except Employee.DoesNotExist as e:
     print(e)
 
 # INSERT
-Employee.objects.bulk_insert(
-    [
-        {"first_name": "Yan", "last_name": "KIKI", "salary": 10000, "grade": "L1"},
-        {"first_name": "Yoweri", "last_name": "ALOH", "salary": 15000, "grade": "L2"},
-    ]
-)
+Employee.objects.bulk_insert([
+    {"first_name": "Yan",    "last_name": "KIKI", "salary": 10000, "grade": "L1"},
+    {"first_name": "Yoweri", "last_name": "ALOH", "salary": 15000, "grade": "L2"},
+])
 print(f"После bulk_insert:\n {Employee.objects.all()}\n")
 
 # UPDATE

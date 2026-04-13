@@ -288,5 +288,8 @@ class QuerySet:
         return self._fetch()[i]
 
     def __repr__(self) -> str:
+        if self._result_cache is not None:
+            suffix = " ..." if len(self._result_cache) > 3 else ""
+            return f"<QuerySet {self._result_cache[:3]}{suffix}>"
         sql, params = self._build_select_sql()
-        return f"<QuerySet sql={sql!r} params={params}>"
+        return f"<QuerySet (unevaluated) sql={sql!r}>"

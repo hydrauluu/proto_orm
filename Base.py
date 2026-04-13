@@ -14,10 +14,12 @@ class MetaModel(type):
             if isinstance(val, BaseFieldDescriptor)
         }
 
+        # Слоты для объявленных полей + id (автоматически для PK из БД)
+        # Плюс _extra для хранения колонок, не объявленных через дескрипторы
         declared_slots = [f"_{field_name}" for field_name in fields]
         if "_id" not in declared_slots:
             declared_slots.append("_id")
-        declared_slots.append("extra")
+        declared_slots.append("_extra")  # для необъявленных колонок
 
         attrs["__slots__"] = declared_slots
         attrs["_fields"] = fields
@@ -35,39 +37,37 @@ class MetaModel(type):
 class BaseModel(metaclass=MetaModel):
     """Базовая модель. Наследуйтесь от неё и задайте table_name."""
 
-    table_name = ""
+    table_name: str = ""
     manager_class = BaseManager
     _fields: dict = {}
-
-    def __init__(self, **row_data) -> None:
-        object.__setattr__(self, "_extra", {})
-        for field_name, value in row_data.items():
-            if (
-                f"_{field_name}" in self.__class__.__slots__
-                or field_name in self.__class__._fields
-            ):
-                object.__setattr__(self, f"_{field_name}", value)
-            else:
-                self._extra[field_name] = value
-
-    def __getattr__(self, name):
-        extra = object.__getattribute__(self, "_extra")
-        if name in extra:
-            return extra[name]
-        raise AttributeError(
-            f"'{type(self).__name__}' object has no attribute '{name}'"
-        )
-
-    def __repr__(self) -> str:
-        extra = object.__getattribute__(self, "_extra")
-        parts = {**extra}
-        for k in self.__class__._fields:
-            parts[k] = getattr(self, k, None)
-        attrs = ", ".join(f"{k}={v}" for k, v in parts.items())
-        return f"<{self.__class__.__name__}: ({attrs})>"
 
     class DoesNotExist(Exception):
         pass
 
     class MultipleObjectsReturned(Exception):
         pass
+
+    def __init__(self, **row_data) -> None:
+        object.__setattr__(self, "_extra", {})
+        for field_name, value in row_data.items():
+            # Если есть слот — ставим через setattr (сработают дескрипторы)
+            # Если нет — кладём в _extra (колонки без дескриптора, напр. id)
+            if f"_{field_name}" in self.__class__.__slots__ or field_name in self.__class__._fields:
+                object.__setattr__(self, f"_{field_name}", value)
+            else:
+                self._extra[field_name] = value
+
+    def __getattr__(self, name):
+        # Читаем из _extra если атрибут не найден обычным путём
+        extra = object.__getattribute__(self, "_extra")
+        if name in extra:
+            return extra[name]
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+
+    def __repr__(self) -> str:
+        extra = object.__getattribute__(self, "_extra")
+        parts = {**extra}  # сначала необъявленные (id первым если есть)
+        for k in self.__class__._fields:
+            parts[k] = getattr(self, k, None)
+        attrs = ", ".join(f"{k}={v}" for k, v in parts.items())
+        return f"<{self.__class__.__name__}: ({attrs})>"
